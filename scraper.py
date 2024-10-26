@@ -80,8 +80,8 @@ def extract_next_links(url, resp):
     if (resp and resp.raw_response):
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         #Stripped Strings is used to get all the string content out of the webpage. Check BeautifulSoup4 docs
-        tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
-        freq = computeWordFrequencies(tokens)
+        #tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
+        #freq = computeWordFrequencies(tokens)
         for link in soup.find_all('a'):
             if link.get('href'):
                 url_list.append(link.get('href').split('#')[0])
@@ -107,7 +107,17 @@ def is_valid(url):
             parsed.path.lower()
         ):
             return False
+
+        '''
+        Searches the path and the query to find out if there are dates.
+        It only find dates like 2004-05-1990 and 2004-05.
+        After running it looks like it does not get stuck in the calendar anymore
+        '''
+        if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path + parsed.query):
+            return False
+
         
+
         #Look into checking for links that are single paged pdf files. Files that return replacement letters.
         
         valid_domains = {"ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "today.uci.edu/department/information_computer_sciences"}

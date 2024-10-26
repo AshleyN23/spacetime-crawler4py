@@ -32,12 +32,11 @@ class Worker(Thread):
                 f"using cache {self.config.cache_server}.")
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
-                urlNoFrag = scraped_url[:scraped_url.find("#")]
                 '''
                 Added by Rudy. This part of the code keeps track of the UNIQUE URLS
                 '''
-                if urlNoFrag not in self.uniqueSet:
-                    self.uniqueSet.add(urlNoFrag)
+                if scraped_url not in self.uniqueSet:
+                    self.uniqueSet.add(scraped_url)
                     self.uniqueURLs += 1
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
