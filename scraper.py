@@ -1,10 +1,70 @@
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
+from bs4 import Comment
+
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
+
+
+'''
+Tokenizer and Freq added by Rudy. Used for tokenizing the text and checking the freq of each word.
+Stop words are not included. The tokenizer is changed a bit so that it also includes some special characters
+like ph.d and b.s. where the special characters are used for the meaning.
+
+'''
+
+def tokenizer(listOfWords):
+    tokens = []
+
+    stopWords = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+    "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't",
+    "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during",
+    "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't",
+    "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here",
+    "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i",
+    "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's",
+    "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no",
+    "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd",
+    "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that",
+    "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+    "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't",
+    "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's",
+    "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom",
+    "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
+    "you're", "you've", "your", "yours", "yourself", "yourselves"
+    }
+
+    for words in listOfWords:
+        words = words.split()
+        for word in words:
+            if word not in stopWords and len(word) > 1:
+                tokens.append(word.lower())
+    return tokens
+
+def computeWordFrequencies(tokens: list): 
+    '''
+    Time Complexity: O(n log n) - Iterates through the tokens list (O(n)) to populate 
+    the dictionary, then sorts it using Python's sorted function, which has 
+    an average time complexity of O(n log n) (Timsort algorithm).
+    '''
+    
+    tokenMap = {}
+    
+    for values in tokens:
+        if values not in tokenMap:
+            tokenMap[values] = 0
+        tokenMap[values] += 1
+    
+    tokenMap = dict(sorted(tokenMap.items(), key=lambda x: x[1], reverse=True)) 
+    return tokenMap
+
 
 def extract_next_links(url, resp):
     # Implementation required.
@@ -19,6 +79,9 @@ def extract_next_links(url, resp):
     url_list = []
     if (resp and resp.raw_response):
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+        #Stripped Strings is used to get all the string content out of the webpage. Check BeautifulSoup4 docs
+        tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
+        freq = computeWordFrequencies(tokens)
         for link in soup.find_all('a'):
             if link.get('href'):
                 url_list.append(link.get('href').split('#')[0])
@@ -45,9 +108,10 @@ def is_valid(url):
         ):
             return False
         
-        valid_domains = ["ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu", "today.uci.edu/department/information_computer_sciences"]
-        for domain_name in valid_domains:
-            if domain_name in parsed.netloc:
+        #Look into checking for links that are single paged pdf files. Files that return replacement letters.
+        
+        valid_domains = {"ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "today.uci.edu/department/information_computer_sciences"}
+        if parsed.netloc in valid_domains:
                 return True
 
     except TypeError:

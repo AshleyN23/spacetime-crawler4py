@@ -12,10 +12,13 @@ class Worker(Thread):
         self.logger = get_logger(f"Worker-{worker_id}", "Worker")
         self.config = config
         self.frontier = frontier
+        self.uniqueURLs = 0
+        self.uniqueSet = set()        
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
         super().__init__(daemon=True)
+
         
     def run(self):
         while True:
@@ -29,6 +32,13 @@ class Worker(Thread):
                 f"using cache {self.config.cache_server}.")
             scraped_urls = scraper.scraper(tbd_url, resp)
             for scraped_url in scraped_urls:
+                urlNoFrag = scraped_url[:scraped_url.find("#")]
+                '''
+                Added by Rudy. This part of the code keeps track of the UNIQUE URLS
+                '''
+                if urlNoFrag not in self.uniqueSet:
+                    self.uniqueSet.add(urlNoFrag)
+                    self.uniqueURLs += 1
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
