@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from bs4 import Comment
+import hashlib
 
 
 def scraper(url, resp):
@@ -45,7 +46,7 @@ def tokenizer(listOfWords):
         words = words.split()
         for word in words:
             if word not in stopWords and len(word) > 1:
-                tokens.append(word.lower())
+                tokens.append(bin(int(hashlib.sha256(word.encode()).hexdigest(), 16))[2::])
     return tokens
 
 def computeWordFrequencies(tokens: list): 
@@ -66,6 +67,34 @@ def computeWordFrequencies(tokens: list):
     return tokenMap
 
 
+'''
+SimHashing: (Used for finding if two texts are similar)
+To sim hash add or subtract the hashString to the index at hashNum
+Go through this with every token and store the result in hashNum
+When this is done continue go through the hashNum and append the values to a hashString
+Turn the hashString back to hex and return the hex
+
+For better detailed description look up Sim Hashing Algorithm.
+'''
+
+def simHash(freq):
+    hashNum = [0] * 256 #Initialize a 256 bit array since I use sha256
+    for bits,frequency in freq.items():
+        for i in range(len(bits)):
+            if bits[i] == "1":
+                hashNum[i] += (1 * frequency)
+            else:
+                hashNum[i] -= (1 * frequency)
+    hashString = ""
+    for i in range(len(hashNum)):
+        if hashNum[i] > 0:
+            hashString += "1"
+        else:
+            hashString += "0"
+    hashString = hex(int(hashString, 2))[2:]
+    return hashString
+
+
 def extract_next_links(url, resp):
     # Implementation required.
     # url: the URL that was used to get the page
@@ -80,8 +109,10 @@ def extract_next_links(url, resp):
     if (resp and resp.raw_response):
         soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         #Stripped Strings is used to get all the string content out of the webpage. Check BeautifulSoup4 docs
-        #tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
-        #freq = computeWordFrequencies(tokens)
+        tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
+        freq = computeWordFrequencies(tokens)
+        hashNum = simHash(freq)
+        print(hashNum)
         for link in soup.find_all('a'):
             if link.get('href'):
                 url_list.append(link.get('href').split('#')[0])
