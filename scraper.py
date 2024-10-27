@@ -53,8 +53,7 @@ def is_valid(url):
         '''
         if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path):
             return False
-        if re.search(r"filter", parsed.query):
-
+        if re.search(r"filter%5B[^%]+%5D=[^&]*.*?(filter%5B[^%]+%5D=[^&]*){1,}", parsed.query):
             return False
 
         
