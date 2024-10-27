@@ -67,6 +67,7 @@ def checkSimilar(hashes, currentSimHash):
             x >>= 1
         if distance >= 3:
             return True
+        print(distance)
     return False
 
 

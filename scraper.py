@@ -24,7 +24,7 @@ def extract_next_links(url, resp):
 
         for link in soup.find_all('a'):
             if link.get('href'):
-                url_list.append(link.get('href').split('#')[0])
+                url_list.append(link.get('href').split('?')[0].split('#')[0])
     return url_list
 
 def is_valid(url):
@@ -53,7 +53,7 @@ def is_valid(url):
         It only find dates like 2004-05-1990 and 2004-05.
         After running it looks like it does not get stuck in the calendar anymore
         '''
-        if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path + parsed.query):
+        if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path):
             return False
 
         
