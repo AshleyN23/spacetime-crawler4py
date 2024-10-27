@@ -2,12 +2,12 @@ import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 
-def scraper(url, resp):
-    links = extract_next_links(url, resp)
+def scraper(url, soup):
+    links = extract_next_links(url, soup)
     return [link for link in links if is_valid(link)]
 
 
-def extract_next_links(url, resp):
+def extract_next_links(url, soup):
     # Implementation required.
     # url: the URL that was used to get the page
     # resp.url: the actual url of the page
@@ -18,13 +18,11 @@ def extract_next_links(url, resp):
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     url_list = []
-    if (resp and resp.raw_response):
-        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
         #Stripped Strings is used to get all the string content out of the webpage. Check BeautifulSoup4 docs
 
-        for link in soup.find_all('a'):
-            if link.get('href'):
-                url_list.append(link.get('href').split('?')[0].split('#')[0])
+    for link in soup.find_all('a'):
+        if link.get('href'):
+            url_list.append(link.get('href').split('#')[0])
     return url_list
 
 def is_valid(url):
@@ -54,6 +52,9 @@ def is_valid(url):
         After running it looks like it does not get stuck in the calendar anymore
         '''
         if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path):
+            return False
+        if re.search(r"filter", parsed.query):
+
             return False
 
         

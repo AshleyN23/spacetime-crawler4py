@@ -35,14 +35,16 @@ class Worker(Thread):
             self.logger.info(
                 f"Downloaded {tbd_url}, status <{resp.status}>, "
                 f"using cache {self.config.cache_server}.")
-            soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
-            tokens = tokenizer(list(soup.stripped_strings)) #I will leave this here and use it later to keep track of the word frequency of each url.
-            freq = computeWordFrequencies(tokens)
-            hashNum = simHash(freq)
-            print(hashNum)
-            if not checkSimilar(self.hashes, hashNum):
-                scraped_urls = scraper.scraper(tbd_url, resp)
-                self.hashes.add(hashNum)
+            if (resp and resp.raw_response):
+                soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+                tokens = tokenizer(list(soup.stripped_strings))
+                freq = computeWordFrequencies(tokens)
+                hashNum = simHash(freq)
+                if not checkSimilar(self.hashes, hashNum):
+                    scraped_urls = scraper.scraper(tbd_url, soup)
+                    self.hashes.add(hashNum)
+                else:
+                    scraped_urls = []
             for scraped_url in scraped_urls:
                 '''
                 Added by Rudy. This part of the code keeps track of the UNIQUE URLS
@@ -53,21 +55,22 @@ class Worker(Thread):
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
+        print(self.uniqueURLs)
 
 
 
 def checkSimilar(hashes, currentSimHash):
     if currentSimHash in hashes:
         return True
-    for items in currentSimHash.items():
-        x = items ^ hashes  # XOR to find differing bits
+    for items in hashes:
+        x = int(items,2) ^ int(currentSimHash, 2) # XOR to find differing bits
         distance = 0
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance >= 3:
+        if distance <= 20:
+            print(distance)
             return True
-        print(distance)
     return False
 
 
