@@ -39,15 +39,18 @@ def extract_next_links(url, resp):
     # TODO: check if this counts html comments
     text = soup.get_text()
     space_delemited_text = re.sub('\s+',' ',text)
-
+    
     # Tokenize and store tokens in the database
     tokens = tokenizer(space_delemited_text)
+    if len(tokens) <= 100:
+        return []
+    #Check if current url is similar to other previous urls
     freq = computeWordFrequencies(tokens)
     hashNum = simHash(freq)
     if checkSimilar(DataBase.hashes, hashNum):
-        DataBase.blacklist_url(url)
+        DataBase.add_seen(url)
         return []
-    DataBase.add_hash(hashNum)
+    DataBase.add_hash(url,hashNum)
     DataBase.add_tokens(tokens)
     # updates max words if total amount of tokens is greater than previous max word count
     DataBase.update_max_words(url, len(tokens))
@@ -65,7 +68,7 @@ def extract_next_links(url, resp):
             DataBase.add_seen(child_url)  # Mark URL as seen
 
     # Add the URL to the scraped set
-    DataBase.add_scraped(urlparse(url).netloc)
+    DataBase.add_scraped(url)
     
 
     return list(valid_links)
@@ -100,7 +103,7 @@ def is_valid(url):
         '''
         if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b|login", parsed.path + parsed.query):
             return False
-        if re.search(r"filter|post_type=tribe_events&eventDisplay", parsed.query):
+        if re.search(r"filter|eventDisplay", parsed.query):
             return False
 
         
@@ -123,13 +126,13 @@ def is_valid(url):
 def checkSimilar(hashes, currentSimHash):
     if currentSimHash in hashes:
         return True
-    for items in hashes:
+    for items in list(hashes.keys()):
         x = int(items,2) ^ int(currentSimHash, 2) # XOR to find differing bits
         distance = 0
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance <= 3:
+        if distance <= 20:
             return True
     return False
 

@@ -24,7 +24,6 @@ class Worker(Thread):
         
     def run(self):
         while True:
-            print(len(DataBase.seen))
             tbd_url = self.frontier.get_tbd_url()
             if not tbd_url:
                 self.logger.info("Frontier is empty. Stopping Crawler.")
@@ -39,5 +38,6 @@ class Worker(Thread):
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
+        DataBase.export_report()
 
 

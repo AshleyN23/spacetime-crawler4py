@@ -1,4 +1,5 @@
 # class used to store all things necessary for report
+from urllib.parse import urlparse
 
 class DataBase:
     # Class-level variables
@@ -7,13 +8,13 @@ class DataBase:
     seen = set()  # URLs that we've visited
     unique_urls = dict() # Unique subdomains encountered and its pages{domain: size}
     blacklistURL = set()  # Blacklisted URLs
-    hashes = set() #Previous hashes (Used to check similarity)
+    hashes = dict() #Previous hashes (Used to check similarity)
 
     maxWords = ["", 0]  # [URL with max words, word count]
 
     @staticmethod
     def add_scraped(url):
-        DataBase.unique_urls[url] += 1
+        DataBase.unique_urls[urlparse(url).netloc] += 1
         DataBase.scraped.add(url)
 
     @staticmethod
@@ -55,20 +56,21 @@ class DataBase:
                 DataBase.allTokens[token] = 1
 
     @staticmethod
-    def add_hash(hash):
-        DataBase.hashes.add(hash)
+    def add_hash(url, hash):
+        DataBase.hashes[hash] = url
     
 
     @staticmethod
     def export_report(filename="URLS.txt"):
+        print(filename)
         with open(filename, "w") as f:
             f.write("SCRAPED URLs:\n")
             for url in DataBase.scraped:
                 f.write(f"{url}\n")
 
             f.write("\n\nUNIQUE DOMAINS:\n")
-            for url in DataBase.unique_urls:
-                f.write(f"{url}\n")
+            for url, num in DataBase.unique_urls.items():
+                f.write(f"{url}, {num}\n")
 
             f.write("\n\nBLACKLISTED URLs:\n")
             for url in DataBase.blacklistURL:
@@ -79,5 +81,6 @@ class DataBase:
             f.write(f"Number of words: {DataBase.maxWords[1]}\n")
 
             f.write("\n\nTOKEN FREQUENCIES:\n")
-            for token, count in DataBase.allTokens.items():
+            #Print the Token Frequencies in descending order
+            for token, count in sorted(DataBase.allTokens.items(), key=lambda item: item[1], reverse=True):
                 f.write(f"{token}: {count}\n")
