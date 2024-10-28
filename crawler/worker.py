@@ -76,7 +76,7 @@ def checkSimilar(hashes, currentSimHash):
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance <= 30:
+        if distance <= 3:
             print(distance)
             return True
     return False
