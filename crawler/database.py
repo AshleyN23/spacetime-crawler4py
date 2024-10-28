@@ -5,12 +5,15 @@ class DataBase:
     allTokens = dict()  # {token: frequency}
     scraped = set()  # URLs we've successfully extracted from or blacklisted
     seen = set()  # URLs that we've visited
-    unique_urls = set()  # Unique domains encountered
+    unique_urls = dict() # Unique subdomains encountered and its pages{domain: size}
     blacklistURL = set()  # Blacklisted URLs
+    hashes = set() #Previous hashes (Used to check similarity)
+
     maxWords = ["", 0]  # [URL with max words, word count]
 
     @staticmethod
     def add_scraped(url):
+        DataBase.unique_urls[url] += 1
         DataBase.scraped.add(url)
 
     @staticmethod
@@ -35,7 +38,8 @@ class DataBase:
 
     @staticmethod
     def add_unique_url(url):
-        DataBase.unique_urls.add(url)
+        if url not in DataBase.unique_urls:
+            DataBase.unique_urls[url] = 1
 
     @staticmethod
     def update_max_words(url, word_count):
@@ -49,6 +53,11 @@ class DataBase:
                 DataBase.allTokens[token] += 1
             else:
                 DataBase.allTokens[token] = 1
+
+    @staticmethod
+    def add_hash(hash):
+        DataBase.hashes.add(hash)
+    
 
     @staticmethod
     def export_report(filename="URLS.txt"):

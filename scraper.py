@@ -2,7 +2,7 @@ import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from crawler.database import DataBase
-from crawler.worker import tokenizer, computeWordFrequencies
+import hashlib
 
 def scraper(url, resp):
     # links = extract_next_links(url, soup)
@@ -42,6 +42,12 @@ def extract_next_links(url, resp):
 
     # Tokenize and store tokens in the database
     tokens = tokenizer(space_delemited_text)
+    freq = computeWordFrequencies(tokens)
+    hashNum = simHash(freq)
+    if checkSimilar(DataBase.hashes, hashNum):
+        DataBase.blacklist_url(url)
+        return []
+    DataBase.add_hash(hashNum)
     DataBase.add_tokens(tokens)
     # updates max words if total amount of tokens is greater than previous max word count
     DataBase.update_max_words(url, len(tokens))
@@ -59,7 +65,8 @@ def extract_next_links(url, resp):
             DataBase.add_seen(child_url)  # Mark URL as seen
 
     # Add the URL to the scraped set
-    DataBase.add_scraped(url)
+    DataBase.add_scraped(urlparse(url).netloc)
+    
 
     return list(valid_links)
 
@@ -70,6 +77,7 @@ def is_valid(url):
     # There are already some conditions that return False.
     try:
         parsed = urlparse(url)
+        
         if parsed.scheme not in set(["http", "https"]):
             return False
         if re.match(
@@ -81,29 +89,128 @@ def is_valid(url):
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
             + r"|rm|smil|wmv|swf|wma|zip|rar|gz)\b.*", 
-            parsed.path.lower() + parsed.query.lower()
+            parsed.path.lower() + parsed.query.lower() #Check if the path or the query contains any of these words
         ):
             return False
 
         '''
         Searches the path and the query to find out if there are dates.
         It only find dates like 2004-05-1990 and 2004-05.
-        After running it looks like it does not get stuck in the calendar anymore
+        
         '''
         if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b|login", parsed.path + parsed.query):
             return False
-        if re.search(r"filter", parsed.query):
+        if re.search(r"filter|post_type=tribe_events&eventDisplay", parsed.query):
             return False
 
         
 
-        #Look into checking for links that are single paged pdf files. Files that return replacement letters.
         
         valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu", "today.uci.edu/department/information_computer_sciences"}
         for domains in valid_domains:
             if domains in parsed.netloc:
+                #Add unique URL
+                DataBase.add_unique_url(parsed.netloc)
                 return True
 
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+
+
+def checkSimilar(hashes, currentSimHash):
+    if currentSimHash in hashes:
+        return True
+    for items in hashes:
+        x = int(items,2) ^ int(currentSimHash, 2) # XOR to find differing bits
+        distance = 0
+        while x:
+            distance += x & 1  # Count the number of 1's in the result
+            x >>= 1
+        if distance <= 3:
+            return True
+    return False
+
+
+'''
+Tokenizer and Freq added by Rudy. Used for tokenizing the text and checking the freq of each word.
+Stop words are not included. The tokenizer is changed a bit so that it also includes some special characters
+like ph.d and b.s. where the special characters are used for the meaning.
+
+'''
+
+def tokenizer(listOfWords):
+    tokens = []
+
+    stopWords = {
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+    "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
+    "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't",
+    "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during",
+    "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't",
+    "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here",
+    "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i",
+    "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's",
+    "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no",
+    "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+    "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd",
+    "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that",
+    "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+    "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this",
+    "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't",
+    "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's",
+    "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom",
+    "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
+    "you're", "you've", "your", "yours", "yourself", "yourselves"
+    }
+
+    for word in listOfWords.split():
+        if len(word) > 1 and word not in stopWords:
+            tokens.append(word.lower())
+    return tokens
+
+def computeWordFrequencies(tokens: list): 
+    '''
+    Time Complexity: O(n log n) - Iterates through the tokens list (O(n)) to populate 
+    the dictionary, then sorts it using Python's sorted function, which has 
+    an average time complexity of O(n log n) (Timsort algorithm).
+    '''
+    
+    tokenMap = {}
+    
+    for values in tokens:
+        values = bin(int(hashlib.sha256(values.encode()).hexdigest(), 16))[2::]
+        if values not in tokenMap:
+            tokenMap[values] = 0
+        tokenMap[values] += 1
+    
+    tokenMap = dict(sorted(tokenMap.items(), key=lambda x: x[1], reverse=True)) 
+    return tokenMap
+
+
+'''
+SimHashing: (Used for finding if two texts are similar)
+To sim hash add or subtract the hashString to the index at hashNum
+Go through this with every token and store the result in hashNum
+When this is done continue go through the hashNum and append the values to a hashString
+Turn the hashString back to hex and return the hex
+
+For better detailed description look up Sim Hashing Algorithm.
+'''
+
+def simHash(freq):
+    hashNum = [0] * 256 #Initialize a 256 bit array since I use sha256
+    for bits,frequency in freq.items():
+        for i in range(len(bits)):
+            if bits[i] == "1":
+                hashNum[i] += (1 * frequency)
+            else:
+                hashNum[i] -= (1 * frequency)
+    hashString = ""
+    for i in range(len(hashNum)):
+        if hashNum[i] > 0:
+            hashString += "1"
+        else:
+            hashString += "0"
+    return hashString
