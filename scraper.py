@@ -34,15 +34,15 @@ def is_valid(url):
         if parsed.scheme not in set(["http", "https"]):
             return False
         if re.match(
-            r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|png|tiff?|mid|mp2|mp3|mp4"
+            r".*\b(css|js|bmp|gif|jpe?g|ico"
+            + r"|png|tiff?|mid|mp2|mp3|mp4|ppsx|rpm"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", 
-            parsed.path.lower()
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)\b.*", 
+            parsed.path.lower() + parsed.query.lower()
         ):
             return False
 
@@ -51,17 +51,18 @@ def is_valid(url):
         It only find dates like 2004-05-1990 and 2004-05.
         After running it looks like it does not get stuck in the calendar anymore
         '''
-        if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b", parsed.path):
+        if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b|login", parsed.path + parsed.query):
             return False
-        if re.search(r"filter%5B[^%]+%5D=[^&]*.*?(filter%5B[^%]+%5D=[^&]*){1,}", parsed.query):
+        if re.search(r"filter", parsed.query):
             return False
 
         
 
         #Look into checking for links that are single paged pdf files. Files that return replacement letters.
         
-        valid_domains = {"ics.uci.edu", "www.cs.uci.edu", "www.informatics.uci.edu", "www.stat.uci.edu", "today.uci.edu/department/information_computer_sciences"}
-        if parsed.netloc in valid_domains:
+        valid_domains = {"ics.uci.edu", "cs.uci.edu", "informatics.uci.edu", "stat.uci.edu", "today.uci.edu/department/information_computer_sciences"}
+        for domains in valid_domains:
+            if domains in parsed.netloc:
                 return True
 
     except TypeError:

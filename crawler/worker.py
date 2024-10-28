@@ -1,5 +1,7 @@
 from threading import Thread
 
+import json
+
 from inspect import getsource
 from utils.download import download
 from utils import get_logger
@@ -16,9 +18,10 @@ class Worker(Thread):
         self.logger = get_logger(f"Worker-{worker_id}", "Worker")
         self.config = config
         self.frontier = frontier
-        self.uniqueURLs = 0
-        self.uniqueSet = set()       
-        self.hashes = set() 
+        self.numPages = 0 #Keep track of pages
+        self.uniquePages = set() 
+        self.hashes = set()
+        self.longest = {}
         # basic check for requests in scraper
         assert {getsource(scraper).find(req) for req in {"from requests import", "import requests"}} == {-1}, "Do not use requests in scraper.py"
         assert {getsource(scraper).find(req) for req in {"from urllib.request import", "import urllib.request"}} == {-1}, "Do not use urllib.request in scraper.py"
@@ -38,24 +41,29 @@ class Worker(Thread):
             if (resp and resp.raw_response):
                 soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
                 tokens = tokenizer(list(soup.stripped_strings))
-                freq = computeWordFrequencies(tokens)
-                hashNum = simHash(freq)
-                if not checkSimilar(self.hashes, hashNum):
-                    scraped_urls = scraper.scraper(tbd_url, soup)
-                    self.hashes.add(hashNum)
+                if len(tokens) > 100 and len(tokens) < 1000:
+                    freq = computeWordFrequencies(tokens)
+                    hashNum = simHash(freq)
+                    if not checkSimilar(self.hashes, hashNum):
+                        scraped_urls = scraper.scraper(tbd_url, soup)
+                        self.hashes.add(hashNum)
+                    else:
+                        scraped_urls = []
                 else:
                     scraped_urls = []
             for scraped_url in scraped_urls:
                 '''
                 Added by Rudy. This part of the code keeps track of the UNIQUE URLS
                 '''
-                if scraped_url not in self.uniqueSet:
-                    self.uniqueSet.add(scraped_url)
-                    self.uniqueURLs += 1
+                if scraped_url not in self.uniquePages:
+                    self.uniquePages.add(scraped_url)
+                    self.numPages += 1
                 self.frontier.add_url(scraped_url)
             self.frontier.mark_url_complete(tbd_url)
             time.sleep(self.config.time_delay)
-        print(self.uniqueURLs)
+        print(f"Total Url: {self.numPages}")
+        with open('output.json', 'w') as f:
+            json.dump(sorted(self.uniquePages), f)
 
 
 
@@ -68,7 +76,7 @@ def checkSimilar(hashes, currentSimHash):
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance <= 20:
+        if distance <= 30:
             print(distance)
             return True
     return False
