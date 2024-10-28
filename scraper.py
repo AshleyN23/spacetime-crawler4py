@@ -53,7 +53,7 @@ def is_valid(url):
         '''
         if re.search(r"\d{4}-\d{2}-\d{2}|\b\d{4}-\d{2}\b|login", parsed.path + parsed.query):
             return False
-        if re.search(r"filter", parsed.query):
+        if re.search(r"filter|post_type=tribe_events&eventDisplay", parsed.query):
             return False
 
         
@@ -64,6 +64,7 @@ def is_valid(url):
         for domains in valid_domains:
             if domains in parsed.netloc:
                 return True
+        return False
 
     except TypeError:
         print ("TypeError for ", parsed)
