@@ -70,12 +70,8 @@ class DataBase:
 
             f.write("\n\nUNIQUE DOMAINS:\n")
             f.write(str(len(DataBase.unique_urls)))
-            for url, num in DataBase.unique_urls.items():
+            for url, num in sorted(DataBase.unique_urls.items(), key=lambda item: (item[1], item[0]), reverse=True):
                 f.write(f"{url}, {num}\n")
-
-            f.write("\n\nBLACKLISTED URLs:\n")
-            for url in DataBase.blacklistURL:
-                f.write(f"{url}\n")
 
             f.write("\n\nLONGEST PAGE (IN TERMS OF WORD COUNT):\n")
             f.write(f"Website URL: {DataBase.maxWords[0]}\n")
