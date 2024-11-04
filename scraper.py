@@ -42,8 +42,6 @@ def extract_next_links(url, resp):
     
     # Tokenize and store tokens in the database
     tokens = tokenizer(space_delemited_text)
-    if len(tokens) <= 100:
-        return []
     #Check if current url is similar to other previous urls
     freq = computeWordFrequencies(tokens)
     hashNum = simHash(freq)
@@ -132,7 +130,7 @@ def checkSimilar(hashes, currentSimHash):
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance <= 3:
+        if distance <= 2:
             return True
     return False
 
