@@ -132,7 +132,7 @@ def checkSimilar(hashes, currentSimHash):
         while x:
             distance += x & 1  # Count the number of 1's in the result
             x >>= 1
-        if distance <= 20:
+        if distance <= 3:
             return True
     return False
 

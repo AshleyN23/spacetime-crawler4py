@@ -62,13 +62,14 @@ class DataBase:
 
     @staticmethod
     def export_report(filename="URLS.txt"):
-        print(filename)
         with open(filename, "w") as f:
             f.write("SCRAPED URLs:\n")
+            f.write(str(len(DataBase.scraped)))
             for url in DataBase.scraped:
                 f.write(f"{url}\n")
 
             f.write("\n\nUNIQUE DOMAINS:\n")
+            f.write(str(len(DataBase.unique_urls)))
             for url, num in DataBase.unique_urls.items():
                 f.write(f"{url}, {num}\n")
 
@@ -82,5 +83,5 @@ class DataBase:
 
             f.write("\n\nTOKEN FREQUENCIES:\n")
             #Print the Token Frequencies in descending order
-            for token, count in sorted(DataBase.allTokens.items(), key=lambda item: item[1], reverse=True):
+            for token, count in sorted(DataBase.allTokens.items(), key=lambda item: item[1], reverse=True)[0:50]:
                 f.write(f"{token}: {count}\n")
